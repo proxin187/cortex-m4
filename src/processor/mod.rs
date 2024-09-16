@@ -5,10 +5,9 @@ mod decoder;
 use crate::bus::{DataBus, BitSize};
 use crate::memory::Memory;
 
+use instruction::Instruction;
 use registers::Registers;
 use decoder::Decoder;
-
-use std::mem;
 
 const RAM_CAPACITY: usize = 16380;
 const FLASH_CAPACITY: usize = 65540;
@@ -29,17 +28,44 @@ impl Processor {
         }
     }
 
-    fn fetch(&mut self) {
-        let inst = self.read::<u16>(self.registers.get_pc() as usize);
-    }
-
     pub fn flash(&mut self, addr: u16, data: &[u8]) {
         for (offset, byte) in data.iter().enumerate() {
             self.flash.write::<u8>(addr as usize + offset, *byte);
         }
     }
 
+    fn fetch(&mut self) -> Instruction {
+        match Decoder::new(self.read::<u16>(self.registers.get_pc() as usize)) {
+            Decoder::Thumb16(thumb16) => {
+                self.registers.add(15, 1u32);
+
+                thumb16.decode()
+            },
+            Decoder::Thumb32(thumb32) => {
+                self.registers.add(15, 2u32);
+
+                thumb32.decode(self.read::<u16>(self.registers.get_pc() as usize - 1))
+            },
+        }
+    }
+
+    fn execute(&mut self) {
+        let inst = self.fetch();
+
+        // setflags is by default false in mov rd, imm8
+
+        match inst {
+            Instruction::Mov { register, source } => {
+                self.registers.mov(register, source);
+            },
+            Instruction::Add { rm, rn, rd } => {
+                // TODO: implement add (register)
+            },
+        }
+    }
+
     pub fn step(&mut self) {
+        self.execute();
     }
 }
 
