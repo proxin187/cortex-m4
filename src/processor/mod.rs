@@ -13,10 +13,11 @@ const RAM_CAPACITY: usize = 16380;
 const FLASH_CAPACITY: usize = 65540;
 
 
+#[derive(Clone)]
 pub struct Processor {
     flash: Memory,
     ram: Memory,
-    registers: Registers,
+    pub registers: Registers,
 }
 
 impl Processor {
@@ -35,7 +36,7 @@ impl Processor {
     }
 
     fn fetch(&mut self) -> Instruction {
-        match Decoder::new(self.read::<u16>(self.registers.get_pc() as usize)) {
+        match Decoder::new(self.read::<u16>(self.registers.get(15) as usize)) {
             Decoder::Thumb16(thumb16) => {
                 self.registers.add(15, 1u32);
 
@@ -44,7 +45,7 @@ impl Processor {
             Decoder::Thumb32(thumb32) => {
                 self.registers.add(15, 2u32);
 
-                thumb32.decode(self.read::<u16>(self.registers.get_pc() as usize - 1))
+                thumb32.decode(self.read::<u16>(self.registers.get(15) as usize - 1))
             },
         }
     }
@@ -52,14 +53,12 @@ impl Processor {
     fn execute(&mut self) {
         let inst = self.fetch();
 
-        // setflags is by default false in mov rd, imm8
-
         match inst {
             Instruction::Mov { register, source } => {
                 self.registers.mov(register, source);
             },
             Instruction::Add { rm, rn, rd } => {
-                // TODO: implement add (register)
+                self.registers.set(rd, self.registers.get(rm) + self.registers.get(rn));
             },
         }
     }

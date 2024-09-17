@@ -1,5 +1,6 @@
 
 
+#[derive(Clone)]
 pub struct APSR {
     value: u32,
 }
@@ -24,6 +25,7 @@ impl APSR {
     }
 }
 
+#[derive(Clone)]
 pub struct Registers {
     registers: [u32; 16],
     apsr: APSR,
@@ -45,7 +47,13 @@ impl Registers {
         self.registers[register as usize] += imm.into();
     }
 
-    pub fn get_pc(&self) -> u32 { self.registers[15] }
+    pub fn set(&mut self, register: u8, value: u32) {
+        self.registers[register as usize] = value;
+    }
+
+    pub fn get(&self, register: u8) -> u32 { self.registers[register as usize] }
+
+    pub fn all(&self) -> [u32; 16] { self.registers }
 }
 
 

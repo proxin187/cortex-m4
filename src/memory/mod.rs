@@ -3,6 +3,7 @@ use crate::bus::{DataBus, BitSize};
 use std::mem;
 
 
+#[derive(Clone)]
 pub struct Memory {
     start: usize,
     data: Vec<u8>,

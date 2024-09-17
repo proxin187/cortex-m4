@@ -2,14 +2,18 @@ mod processor;
 mod memory;
 mod bus;
 mod loader;
+mod tui;
 
 use processor::Processor;
 use loader::{Hex, Kind};
+
+use tui::Tui;
 
 use std::fs;
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /*
     let mut processor = Processor::new();
 
     let raw = fs::read("examples/minimal/main.hex")?;
@@ -33,6 +37,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     processor.step();
+    */
+
+    let mut tui = Tui::new()?;
+
+    tui.run()?;
 
     Ok(())
 }
