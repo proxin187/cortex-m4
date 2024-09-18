@@ -71,10 +71,14 @@ impl Tui {
         })
     }
 
+    // NOTE: the reason why we crash when pressing backspace is because memory is empty in this
+    // example
+
     fn handle_keypress(&mut self, keycode: KeyCode) -> Result<(), Box<dyn std::error::Error>> {
         match keycode {
             KeyCode::Char(character) => self.command.insert(character)?,
             KeyCode::Backspace => self.command.remove()?,
+            KeyCode::Enter => self.processor.step(),
             KeyCode::Esc => self.should_close = true,
             _ => {},
         }

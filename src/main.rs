@@ -13,7 +13,6 @@ use std::fs;
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /*
     let mut processor = Processor::new();
 
     let raw = fs::read("examples/minimal/main.hex")?;
@@ -37,11 +36,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     processor.step();
-    */
+    processor.step();
+    processor.step();
 
+    /*
     let mut tui = Tui::new()?;
 
     tui.run()?;
+    */
 
     Ok(())
 }
