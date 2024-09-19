@@ -1,6 +1,6 @@
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Source {
     Imm8(u8),
     Imm16(u16),
@@ -15,7 +15,7 @@ impl Into<u32> for Source {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instruction {
     Mov {
         register: u8,
@@ -26,6 +26,17 @@ pub enum Instruction {
         rn: u8,
         rd: u8,
     },
+    Undefined,
+}
+
+impl std::fmt::Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            Instruction::Mov { register, source } => f.write_fmt(format_args!("mov r<{}>, {}", register, Into::<u32>::into(source.clone()))),
+            Instruction::Add { rm, rn, rd } => f.write_fmt(format_args!("add r<{}>, r<{}>, r<{}>", rd, rn, rm)),
+            Instruction::Undefined => f.write_fmt(format_args!("undefined")),
+        }
+    }
 }
 
 

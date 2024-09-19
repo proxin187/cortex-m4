@@ -4,46 +4,46 @@ mod bus;
 mod loader;
 mod tui;
 
-use processor::Processor;
-use loader::{Hex, Kind};
-
 use tui::Tui;
+
+use clap::{Parser, Subcommand};
 
 use std::fs;
 
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[command(subcommand)]
+    command: Command,
+
+    #[arg(long, short, action)]
+    debug: bool,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// a interactive emulator interface
+    Interactive {
+        path: String
+    },
+}
+
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut processor = Processor::new();
+    let args = Args::parse();
 
-    let raw = fs::read("examples/minimal/main.hex")?;
+    match args.command {
+        Command::Interactive { path } => {
+            let rom = fs::read(path)?;
 
-    let mut hex = Hex::new(&raw)?;
+            let mut tui = Tui::new()?;
 
-    while let Ok(record) = hex.next() {
-        println!("record: {:#x?}", record);
+            tui.flash(&rom)?;
 
-        match record.kind {
-            Kind::Data => {
-                processor.flash(record.addr, &record.data);
-            },
-            Kind::ExtendSegmentAddress => {},
-            Kind::StartSegmentAddress => {
-            },
-            Kind::ExtendLinearAddress => {},
-            Kind::StartLinearAddress => {},
-            Kind::Eof => {},
-        }
+            tui.run()?;
+        },
     }
-
-    processor.step();
-    processor.step();
-    processor.step();
-
-    /*
-    let mut tui = Tui::new()?;
-
-    tui.run()?;
-    */
 
     Ok(())
 }

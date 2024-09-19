@@ -43,7 +43,7 @@ impl Thumb16 {
                 rn: (self.opcode.get(10..13) << 11) as u8,
                 rd: (self.opcode.get(13..16) << 11) as u8,
             },
-            _ => todo!("implement faults"),
+            _ => Instruction::Undefined,
         }
     }
 }

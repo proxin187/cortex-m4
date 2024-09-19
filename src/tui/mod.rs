@@ -1,6 +1,7 @@
 mod widgets;
 
 use crate::processor::Processor;
+use crate::loader::{Hex, Kind};
 
 use ratatui::prelude::*;
 use crossterm::{terminal, event::{self, *}, ExecutableCommand};
@@ -105,6 +106,28 @@ impl Tui {
     fn poll_event(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         if event::poll(Duration::from_millis(50))? {
             self.handle_event(event::read()?)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn flash(&mut self, rom: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+        let mut hex = Hex::new(rom)?;
+
+        loop {
+            let record = hex.next()?;
+
+            match record.kind {
+                Kind::Data => {
+                    self.processor.flash(record.addr, &record.data);
+                },
+                Kind::ExtendSegmentAddress => {},
+                Kind::StartSegmentAddress => {
+                },
+                Kind::ExtendLinearAddress => {},
+                Kind::StartLinearAddress => {},
+                Kind::Eof => break,
+            }
         }
 
         Ok(())

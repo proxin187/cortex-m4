@@ -1,5 +1,5 @@
-mod instruction;
-mod registers;
+pub mod instruction;
+pub mod registers;
 mod decoder;
 
 use crate::bus::{DataBus, BitSize};
@@ -35,15 +35,15 @@ impl Processor {
         }
     }
 
-    fn fetch(&mut self) -> Instruction {
+    pub fn fetch(&mut self) -> Instruction {
         match Decoder::new(self.read::<u16>(self.registers.get(15) as usize)) {
             Decoder::Thumb16(thumb16) => {
-                self.registers.add(15, 1u32);
+                self.registers.add(15, 2u32);
 
                 thumb16.decode()
             },
             Decoder::Thumb32(thumb32) => {
-                self.registers.add(15, 2u32);
+                self.registers.add(15, 4u32);
 
                 thumb32.decode(self.read::<u16>(self.registers.get(15) as usize - 1))
             },
@@ -60,6 +60,7 @@ impl Processor {
             Instruction::Add { rm, rn, rd } => {
                 self.registers.set(rd, self.registers.get(rm) + self.registers.get(rn));
             },
+            Instruction::Undefined => panic!("undefined behaviour"),
         }
     }
 
