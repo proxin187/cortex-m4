@@ -1,22 +1,28 @@
 pub mod instruction;
 pub mod registers;
 mod decoder;
+mod fault;
 
 use crate::bus::{DataBus, BitSize};
+use crate::loader::{Hex, Kind};
 use crate::memory::Memory;
 
-use instruction::Instruction;
+use instruction::{Instruction, InstructionKind};
 use registers::Registers;
 use decoder::Decoder;
 
 const RAM_CAPACITY: usize = 16380;
 const FLASH_CAPACITY: usize = 65540;
+const PRIVATE_PERIPHERAL_BUS_INTERNAL: usize = 0xE0040000 - 0xE0000000;
+const PRIVATE_PERIPHERAL_BUS_EXTERNAL: usize = 0xE0100000 - 0xE0040000;
 
 
 #[derive(Clone)]
 pub struct Processor {
     flash: Memory,
     ram: Memory,
+    ppbi: Memory,
+    ppbe: Memory,
     pub registers: Registers,
 }
 
@@ -25,14 +31,38 @@ impl Processor {
         Processor {
             flash: Memory::new(0x0, FLASH_CAPACITY),
             ram: Memory::new(0x20000000, RAM_CAPACITY),
+            ppbi: Memory::new(0xE0000000, PRIVATE_PERIPHERAL_BUS_INTERNAL),
+            ppbe: Memory::new(0xE0040000, PRIVATE_PERIPHERAL_BUS_EXTERNAL),
             registers: Registers::new(),
         }
     }
 
-    pub fn flash(&mut self, addr: u16, data: &[u8]) {
+    pub fn flash_data(&mut self, addr: u16, data: &[u8]) {
         for (offset, byte) in data.iter().enumerate() {
             self.flash.write::<u8>(addr as usize + offset, *byte);
         }
+    }
+
+    pub fn flash(&mut self, rom: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+        let mut hex = Hex::new(rom)?;
+
+        loop {
+            let record = hex.next()?;
+
+            match record.kind {
+                Kind::Data => {
+                    self.flash_data(record.addr, &record.data);
+                },
+                Kind::ExtendSegmentAddress => {},
+                Kind::StartSegmentAddress => {
+                },
+                Kind::ExtendLinearAddress => {},
+                Kind::StartLinearAddress => {},
+                Kind::Eof => break,
+            }
+        }
+
+        Ok(())
     }
 
     pub fn fetch(&mut self) -> Instruction {
@@ -40,12 +70,18 @@ impl Processor {
             Decoder::Thumb16(thumb16) => {
                 self.registers.add(15, 2u32);
 
-                thumb16.decode()
+                Instruction {
+                    kind: thumb16.decode(),
+                    addr: self.registers.get(15) - 2,
+                }
             },
             Decoder::Thumb32(thumb32) => {
                 self.registers.add(15, 4u32);
 
-                thumb32.decode(self.read::<u16>(self.registers.get(15) as usize - 1))
+                Instruction {
+                    kind: thumb32.decode(self.read::<u16>(self.registers.get(15) as usize - 1)),
+                    addr: self.registers.get(15) - 4,
+                }
             },
         }
     }
@@ -53,14 +89,14 @@ impl Processor {
     fn execute(&mut self) {
         let inst = self.fetch();
 
-        match inst {
-            Instruction::Mov { register, source } => {
+        match inst.kind {
+            InstructionKind::Mov { register, source } => {
                 self.registers.mov(register, source);
             },
-            Instruction::Add { rm, rn, rd } => {
+            InstructionKind::Add { rm, rn, rd } => {
                 self.registers.set(rd, self.registers.get(rm) + self.registers.get(rn));
             },
-            Instruction::Undefined => panic!("undefined behaviour"),
+            InstructionKind::Undefined => panic!("undefined behaviour"),
         }
     }
 
@@ -69,6 +105,7 @@ impl Processor {
     }
 }
 
+// TODO: implement read/write for private peripheral bus
 impl DataBus for Processor {
     fn read<T>(&self, addr: usize) -> T where T: BitSize {
         match addr {

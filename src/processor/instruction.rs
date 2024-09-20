@@ -16,7 +16,7 @@ impl Into<u32> for Source {
 }
 
 #[derive(Debug, Clone)]
-pub enum Instruction {
+pub enum InstructionKind {
     Mov {
         register: u8,
         source: Source,
@@ -29,14 +29,21 @@ pub enum Instruction {
     Undefined,
 }
 
-impl std::fmt::Display for Instruction {
+impl std::fmt::Display for InstructionKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            Instruction::Mov { register, source } => f.write_fmt(format_args!("mov r<{}>, {}", register, Into::<u32>::into(source.clone()))),
-            Instruction::Add { rm, rn, rd } => f.write_fmt(format_args!("add r<{}>, r<{}>, r<{}>", rd, rn, rm)),
-            Instruction::Undefined => f.write_fmt(format_args!("undefined")),
+            InstructionKind::Mov { register, source } => f.write_fmt(format_args!("mov r{}, {}", register, Into::<u32>::into(source.clone()))),
+            InstructionKind::Add { rm, rn, rd } => f.write_fmt(format_args!("add r{}, r{}, r{}", rd, rn, rm)),
+            InstructionKind::Undefined => f.write_fmt(format_args!("undefined")),
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Instruction {
+    pub kind: InstructionKind,
+    pub addr: u32,
+}
+
 
 

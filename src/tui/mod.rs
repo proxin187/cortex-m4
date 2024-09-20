@@ -1,7 +1,6 @@
 mod widgets;
 
 use crate::processor::Processor;
-use crate::loader::{Hex, Kind};
 
 use ratatui::prelude::*;
 use crossterm::{terminal, event::{self, *}, ExecutableCommand};
@@ -72,9 +71,6 @@ impl Tui {
         })
     }
 
-    // NOTE: the reason why we crash when pressing backspace is because memory is empty in this
-    // example
-
     fn handle_keypress(&mut self, keycode: KeyCode) -> Result<(), Box<dyn std::error::Error>> {
         match keycode {
             KeyCode::Char(character) => self.command.insert(character)?,
@@ -112,25 +108,7 @@ impl Tui {
     }
 
     pub fn flash(&mut self, rom: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-        let mut hex = Hex::new(rom)?;
-
-        loop {
-            let record = hex.next()?;
-
-            match record.kind {
-                Kind::Data => {
-                    self.processor.flash(record.addr, &record.data);
-                },
-                Kind::ExtendSegmentAddress => {},
-                Kind::StartSegmentAddress => {
-                },
-                Kind::ExtendLinearAddress => {},
-                Kind::StartLinearAddress => {},
-                Kind::Eof => break,
-            }
-        }
-
-        Ok(())
+        self.processor.flash(rom)
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {

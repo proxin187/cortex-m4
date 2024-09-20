@@ -1,6 +1,6 @@
 use super::{Command, Processor};
 
-use crate::processor::instruction::Instruction;
+use crate::processor::instruction::{Instruction, InstructionKind};
 use crate::processor::registers::Registers;
 
 use ratatui::style::palette::tailwind;
@@ -30,15 +30,14 @@ impl<'a, 'b> Widgets<'a, 'b> {
     pub fn new(frame: &'b mut Frame<'a>, mut processor: Processor) -> Widgets<'a, 'b> {
         let registers = processor.registers.clone();
 
-        // TODO: FIX THIS
-        let mut instructions = vec![Instruction::Undefined; 12];
+        let mut instructions = vec![Instruction { kind: InstructionKind::Undefined, addr: 0 }; 16];
 
         instructions.fill_with(|| processor.fetch());
 
         Widgets {
             frame,
             registers: RegisterWidget::new(registers.clone()),
-            instruction: InstructionWidget::new(vec![processor.fetch()], registers.get(15)),
+            instruction: InstructionWidget::new(instructions),
         }
     }
 
@@ -111,10 +110,10 @@ impl RegisterWidget {
             .enumerate()
             .map(|(register, value)| {
                 let row = match register {
-                    13 => Row::new([format!("r<{}>", register), format!("{}", value), String::from("Stack Pointer")]),
-                    14 => Row::new([format!("r<{}>", register), format!("{}", value), String::from("Link Register")]),
-                    15 => Row::new([format!("r<{}>", register), format!("{}", value), String::from("Program Counter")]),
-                    _ => Row::new([format!("r<{}>", register), format!("{}", value), String::from("Generic")]),
+                    13 => Row::new([format!("r{}", register), format!("{}", value), String::from("Stack Pointer")]),
+                    14 => Row::new([format!("r{}", register), format!("{}", value), String::from("Link Register")]),
+                    15 => Row::new([format!("r{}", register), format!("{}", value), String::from("Program Counter")]),
+                    _ => Row::new([format!("r{}", register), format!("{}", value), String::from("Generic")]),
                 };
 
                 row.fg(tailwind::SLATE.c200).bg(alternate!(register))
@@ -142,23 +141,21 @@ impl RegisterWidget {
 
 pub struct InstructionWidget {
     instructions: Vec<Instruction>,
-    pc: u32,
 }
 
 impl InstructionWidget {
-    pub fn new(instructions: Vec<Instruction>, pc: u32) -> InstructionWidget {
+    pub fn new(instructions: Vec<Instruction>) -> InstructionWidget {
         InstructionWidget {
             instructions,
-            pc,
         }
     }
 
     pub fn widget(&self) -> impl Widget {
         let rows = self.instructions.iter()
             .enumerate()
-            .map(|(addr, inst)| {
-                Row::new([format!("{}", self.pc + addr as u32), format!("{}", inst)])
-                    .fg(tailwind::SLATE.c200).bg(alternate!(addr))
+            .map(|(count, inst)| {
+                Row::new([format!("{:#x?}", inst.addr), format!("{}", inst.kind)])
+                    .fg(tailwind::SLATE.c200).bg(alternate!(count))
             })
             .collect::<Vec<Row>>();
 

@@ -4,6 +4,7 @@ mod bus;
 mod loader;
 mod tui;
 
+use processor::Processor;
 use tui::Tui;
 
 use clap::{Parser, Subcommand};
@@ -27,6 +28,11 @@ enum Command {
     Interactive {
         path: String
     },
+
+    /// a minimal emulator interface with no tui
+    Minimal {
+        path: String
+    },
 }
 
 
@@ -42,6 +48,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             tui.flash(&rom)?;
 
             tui.run()?;
+        },
+        Command::Minimal { path } => {
+            let rom = fs::read(path)?;
+
+            let mut processor = Processor::new();
+
+            processor.flash(&rom)?;
+
+            // TODO: finish the minimal interface
         },
     }
 

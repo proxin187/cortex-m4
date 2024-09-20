@@ -16,7 +16,7 @@ impl Thumb32 {
         }
     }
 
-    pub fn decode(&self, halfword: u16) -> Instruction {
+    pub fn decode(&self, halfword: u16) -> InstructionKind {
         todo!("implement thumb32 instructions");
     }
 }
@@ -32,18 +32,18 @@ impl Thumb16 {
         }
     }
 
-    pub fn decode(&self) -> Instruction {
-        match self.opcode.get(0..5) {
-            0b0010_0000_0000_0000 => Instruction::Mov {
-                register: (self.opcode.get(5..9) << 5) as u8,
-                source: Source::Imm8((self.opcode.get(9..16) << 9) as u8),
+    pub fn decode(&self) -> InstructionKind {
+        match self.opcode.get(11..16) {
+            0b0010_0000_0000_0000 => InstructionKind::Mov {
+                register: (self.opcode.get(8..11) >> 8) as u8,
+                source: Source::Imm8((self.opcode.get(0..8)) as u8),
             },
-            0b0001_1000_0000_0000 => Instruction::Add {
-                rm: (self.opcode.get(7..10) << 9) as u8,
-                rn: (self.opcode.get(10..13) << 11) as u8,
-                rd: (self.opcode.get(13..16) << 11) as u8,
+            0b0001_1000_0000_0000 => InstructionKind::Add {
+                rm: (self.opcode.get(6..9) >> 6) as u8,
+                rn: (self.opcode.get(3..6) >> 3) as u8,
+                rd: (self.opcode.get(0..3)) as u8,
             },
-            _ => Instruction::Undefined,
+            _ => InstructionKind::Undefined,
         }
     }
 }
@@ -55,7 +55,7 @@ pub enum Decoder {
 
 impl Decoder {
     pub fn new(halfword: u16) -> Decoder {
-        match halfword.get(0..5) {
+        match halfword.get(11..16) {
             0b1110_1000_0000_0000 | 0b1111_0000_0000_0000 |  0b1111_1000_0000_0000 => Decoder::Thumb32(Thumb32::new(halfword)),
             _ => Decoder::Thumb16(Thumb16::new(halfword)),
         }
@@ -68,7 +68,7 @@ pub trait BitVec {
 
 impl BitVec for u16 {
     fn get(&self, range: Range<u8>) -> Self {
-        *self & range.fold(0, |acc, bit| acc | (0b1000_0000_0000_0000 >> bit))
+        *self & range.fold(0, |acc, bit| acc | (0b0000_0000_0000_0001 << bit))
     }
 }
 
