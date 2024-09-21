@@ -13,15 +13,15 @@ impl APSR {
     }
 
     pub fn get(&self, bit: u32) -> bool {
-        ((self.value & (0b1000 >> bit)) << bit) != 0
+        ((self.value & (0b0000_0000_0000_0001 << bit)) >> bit) != 0
     }
 
     pub fn set(&mut self, bit: u32) {
-        self.value |= 0b1000 >> bit;
+        self.value |= 0b0000_0000_0000_0001 << bit;
     }
 
     pub fn unset(&mut self, bit: u32) {
-        self.value &= !(0b1000 >> bit);
+        self.value &= !(0b0000_0000_0000_0001 << bit);
     }
 }
 

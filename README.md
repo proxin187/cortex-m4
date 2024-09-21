@@ -1,12 +1,13 @@
 # Cortex-m4
 
-A pure rust nRF52833/cortex-m4 emulator
+A pure rust nRF52833/cortex-m4 emulator created by a dude with zero arm experience.
 
 
 # Roadmap
 - [x] Intel Hex Loader
-- [ ] Instruction decoder (next commit)
-- [ ] Pheripherals
+- [x] Instruction decoder
+- [x] interactive interface with disassembly
+- [ ] Faults and Exceptions (in progress)
 
 
 # License

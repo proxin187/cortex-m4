@@ -13,8 +13,8 @@ use decoder::Decoder;
 
 const RAM_CAPACITY: usize = 16380;
 const FLASH_CAPACITY: usize = 65540;
-const PRIVATE_PERIPHERAL_BUS_INTERNAL: usize = 0xE0040000 - 0xE0000000;
-const PRIVATE_PERIPHERAL_BUS_EXTERNAL: usize = 0xE0100000 - 0xE0040000;
+const PRIVATE_PERIPHERAL_BUS_INTERNAL: usize = 0xe0040000 - 0xe0000000;
+const PRIVATE_PERIPHERAL_BUS_EXTERNAL: usize = 0xe0100000 - 0xe0040000;
 
 
 #[derive(Clone)]
@@ -105,12 +105,13 @@ impl Processor {
     }
 }
 
-// TODO: implement read/write for private peripheral bus
 impl DataBus for Processor {
     fn read<T>(&self, addr: usize) -> T where T: BitSize {
         match addr {
             0x0..0x10004 => self.flash.read(addr),
             0x20000000..0x20003ffc => self.ram.read(addr),
+            0xe0000000..0xe0040000 => self.ppbi.read(addr),
+            0xe0040000..0xe0100000 => self.ppbe.read(addr),
             _ => panic!("out of bounds"),
         }
     }
@@ -119,6 +120,8 @@ impl DataBus for Processor {
         match addr {
             0x0..0x10004 => self.flash.write(addr, value),
             0x20000000..0x20003ffc => self.ram.write(addr, value),
+            0xe0000000..0xe0040000 => self.ppbi.write(addr, value),
+            0xe0040000..0xe0100000 => self.ppbe.write(addr, value),
             _ => panic!("out of bounds"),
         }
     }
