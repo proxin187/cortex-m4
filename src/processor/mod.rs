@@ -14,14 +14,7 @@ use fault::{InterruptController, Exception};
 
 const RAM_CAPACITY: usize = 16380;
 const FLASH_CAPACITY: usize = 65540;
-const PRIVATE_PERIPHERAL_BUS_INTERNAL: usize = 0xe0040000 - 0xe0000000;
-const PRIVATE_PERIPHERAL_BUS_EXTERNAL: usize = 0xe0100000 - 0xe0040000;
 
-
-pub struct Frame {
-    align: bool,
-    ptr: u32,
-}
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Mode {
@@ -33,8 +26,6 @@ pub enum Mode {
 pub struct Processor {
     flash: Memory,
     ram: Memory,
-    ppbi: Memory,
-    ppbe: Memory,
     nvic: InterruptController,
     mode: Mode,
     pub registers: Registers,
@@ -45,8 +36,6 @@ impl Processor {
         Processor {
             flash: Memory::new(0x0, FLASH_CAPACITY),
             ram: Memory::new(0x20000000, RAM_CAPACITY),
-            ppbi: Memory::new(0xE0000000, PRIVATE_PERIPHERAL_BUS_INTERNAL),
-            ppbe: Memory::new(0xE0040000, PRIVATE_PERIPHERAL_BUS_EXTERNAL),
             nvic: InterruptController::new(),
             mode: Mode::Thread,
             registers: Registers::new(),
@@ -121,34 +110,15 @@ impl Processor {
         }
     }
 
-    pub fn frame(&mut self) -> Frame {
-        let align = (self.registers.get(13, self.mode) & (1 << 2)) != 0;
-
-        self.registers.set(13, |sp| (sp - 0x20) & ((1 << 2) ^ 0xFFFF_FFFF), self.mode);
-
-        Frame {
-            align,
-            ptr: self.registers.get(13, self.mode),
-        }
-    }
-
-    fn push_stack(&mut self) {
-        let frame = self.frame();
-
-        for (offset, register) in [0, 1, 2, 3, 12, 14].iter().enumerate() {
-            self.write::<u32>(frame.ptr as usize + (offset * 4), self.registers.get(*register, self.mode));
-        }
-
-        self.write::<u32>(frame.ptr as usize + 0x18, self.registers.get(15, self.mode));
-
-        // TODO: push apsr to the stack
-    }
-
     fn handle_exception(&mut self) {
         if let Some(exception) = self.nvic.poll() {
             match exception {
                 Exception::Reset => self.reset(),
-                _ => {},
+                _ => {
+                    self.push_stack();
+
+                    self.exception_taken(exception);
+                },
             }
         }
     }
@@ -165,18 +135,16 @@ impl DataBus for Processor {
         match addr {
             0x0..0x10004 => self.flash.read(addr),
             0x20000000..0x20003ffc => self.ram.read(addr),
-            0xe0000000..0xe0040000 => self.ppbi.read(addr),
-            0xe0040000..0xe0100000 => self.ppbe.read(addr),
+            0xe000ed08 => self.registers.vtor.read(),
             _ => { self.nvic.throw(Exception::BusFault); T::default() },
         }
     }
 
-    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize + Default {
+    fn write<T>(&mut self, addr: usize, value: T) where u32: From<T>, T: BitSize + Default + Into<u32> {
         match addr {
             0x0..0x10004 => self.flash.write(addr, value),
             0x20000000..0x20003ffc => self.ram.write(addr, value),
-            0xe0000000..0xe0040000 => self.ppbi.write(addr, value),
-            0xe0040000..0xe0100000 => self.ppbe.write(addr, value),
+            0xe000ed08 => self.registers.vtor.write(value),
             _ => self.nvic.throw(Exception::BusFault),
         }
     }

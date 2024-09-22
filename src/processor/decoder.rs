@@ -68,7 +68,13 @@ pub trait BitVec {
 
 impl BitVec for u16 {
     fn get(&self, range: Range<u8>) -> Self {
-        *self & range.fold(0, |acc, bit| acc | (0b0000_0000_0000_0001 << bit))
+        *self & range.fold(0, |acc, bit| acc | (1u16 << bit))
+    }
+}
+
+impl BitVec for u32 {
+    fn get(&self, range: Range<u8>) -> Self {
+        *self & range.fold(0, |acc, bit| acc | (1u32 << bit))
     }
 }
 

@@ -28,7 +28,7 @@ impl BitSize for u32 {
 pub trait DataBus {
     fn read<T>(&mut self, addr: usize) -> T where T: BitSize + Default;
 
-    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize + Default;
+    fn write<T>(&mut self, addr: usize, value: T) where u32: From<T>, T: BitSize + Default + Into<u32>;
 }
 
 

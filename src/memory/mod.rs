@@ -27,7 +27,7 @@ impl DataBus for Memory {
         T::from(&self.data[offset..offset + mem::size_of::<T>()])
     }
 
-    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize + Default {
+    fn write<T>(&mut self, addr: usize, value: T) where  u32: From<T>, T: BitSize + Default + Into<u32> {
         let bytes = value.to_bytes();
         let offset = self.offset(addr);
 

@@ -1,4 +1,7 @@
+use super::decoder::BitVec;
 use super::Mode;
+
+use crate::bus::BitSize;
 
 
 // page 429 @ ARMv7M Reference Manual
@@ -45,34 +48,73 @@ impl StackPointer {
 }
 
 #[derive(Clone)]
-pub struct APSR {
-    value: u32,
+pub struct PSR {
+    pub value: u32,
 }
 
-impl APSR {
-    pub fn new() -> APSR {
-        APSR {
+impl PSR {
+    pub fn new() -> PSR {
+        PSR {
             value: 0,
         }
     }
 
     pub fn get(&self, bit: u32) -> bool {
-        ((self.value & (0b0000_0000_0000_0001 << bit)) >> bit) != 0
+        ((self.value & (1 << bit)) >> bit) != 0
     }
 
     pub fn set(&mut self, bit: u32) {
-        self.value |= 0b0000_0000_0000_0001 << bit;
+        self.value |= 1 << bit;
     }
 
     pub fn unset(&mut self, bit: u32) {
-        self.value &= !(0b0000_0000_0000_0001 << bit);
+        self.value &= !(1 << bit);
+    }
+}
+
+pub enum TableBase {
+    Code,
+    Ram,
+}
+
+impl TableBase {
+    fn value(self) -> u32 {
+        match self {
+            TableBase::Code => 0,
+            TableBase::Ram => 1,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Vtor {
+    value: u32,
+}
+
+impl Vtor {
+    pub fn new(base: TableBase, offset: u32) -> Vtor {
+        Vtor {
+            value: (base.value() << 29) | offset << 28,
+        }
+    }
+
+    pub fn read<T>(&self) -> T where T: BitSize { T::from(&self.value.to_bytes()) }
+
+    pub fn write<T>(&mut self, value: T) where T: BitSize + Into<u32> { self.value = value.into() }
+
+    pub fn addr(&self) -> u32 {
+        match self.value & (1 << 29) {
+            0 => self.value.get(7..29) >> 7,
+            _ => (self.value.get(7..29) >> 7) + 0x20000000,
+        }
     }
 }
 
 #[derive(Clone)]
 pub struct Registers {
     registers: [u32; 16],
-    apsr: APSR,
+    pub vtor: Vtor,
+    pub psr: PSR,
     pub sp: StackPointer,
     pub control: Control,
 }
@@ -81,7 +123,9 @@ impl Registers {
     pub fn new() -> Registers {
         Registers {
             registers: [0; 16],
-            apsr: APSR::new(),
+            // TODO: initialize this with a default vector table
+            vtor: Vtor::new(TableBase::Code, 0),
+            psr: PSR::new(),
             sp: StackPointer::new(0, 0),
             control: Control::new(false, false),
         }

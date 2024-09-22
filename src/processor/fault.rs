@@ -1,5 +1,14 @@
+use super::{Processor, Mode};
+
+use crate::bus::DataBus;
+
 use std::collections::HashMap;
 
+
+pub struct Frame {
+    align: bool,
+    ptr: u32,
+}
 
 #[repr(usize)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -92,6 +101,54 @@ impl InterruptController {
         });
 
         self.pending.pop()
+    }
+}
+
+impl Processor {
+    pub fn frame(&mut self) -> Frame {
+        let align = (self.registers.get(13, self.mode) & (1 << 2)) != 0;
+
+        self.registers.set(13, |sp| (sp - 0x20) & ((1 << 2) ^ 0xFFFF_FFFF), self.mode);
+
+        Frame {
+            align,
+            ptr: self.registers.get(13, self.mode),
+        }
+    }
+
+    pub fn push_stack(&mut self) {
+        let frame = self.frame();
+
+        for (offset, register) in [0, 1, 2, 3, 12, 14].iter().enumerate() {
+            self.write::<u32>(frame.ptr as usize + (offset * 4), self.registers.get(*register, self.mode));
+        }
+
+        self.write::<u32>(frame.ptr as usize + 0x18, self.registers.get(15, self.mode));
+
+        self.write::<u32>(frame.ptr as usize + 0x1c, (self.registers.psr.value & !(1 << 9)) | ((frame.align as u32) << 9));
+
+        if self.mode == Mode::Handle {
+            self.registers.set(14, |_| 0xfffffff1, self.mode);
+        } else if !self.registers.control.stack {
+            self.registers.set(14, |_| 0xfffffff9, self.mode);
+        } else {
+            self.registers.set(14, |_| 0xfffffffd, self.mode);
+        }
+    }
+
+    // TODO: this is not done!
+    pub fn exception_taken(&mut self, exception: Exception) {
+        self.mode = Mode::Handle;
+
+        self.registers.control.stack = false;
+
+        let handler = self.read::<u32>(self.registers.vtor.addr() as usize + Into::<usize>::into(exception) * 4);
+
+        self.registers.set(15, |_| handler, self.mode);
+
+        if (handler & 1) != 0 {
+            self.registers.psr.set(24);
+        }
     }
 }
 
