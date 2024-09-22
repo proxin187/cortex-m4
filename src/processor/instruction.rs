@@ -1,6 +1,6 @@
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Source {
     Imm8(u8),
     Imm16(u16),
