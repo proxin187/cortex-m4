@@ -21,13 +21,13 @@ impl Memory {
 }
 
 impl DataBus for Memory {
-    fn read<T>(&self, addr: usize) -> T where T: BitSize {
+    fn read<T>(&mut self, addr: usize) -> T where T: BitSize + Default {
         let offset = self.offset(addr);
 
         T::from(&self.data[offset..offset + mem::size_of::<T>()])
     }
 
-    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize {
+    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize + Default {
         let bytes = value.to_bytes();
         let offset = self.offset(addr);
 

@@ -10,6 +10,7 @@ use crate::memory::Memory;
 use instruction::{Instruction, InstructionKind};
 use registers::Registers;
 use decoder::Decoder;
+use fault::{InterruptController, Exception};
 
 const RAM_CAPACITY: usize = 16380;
 const FLASH_CAPACITY: usize = 65540;
@@ -17,12 +18,26 @@ const PRIVATE_PERIPHERAL_BUS_INTERNAL: usize = 0xe0040000 - 0xe0000000;
 const PRIVATE_PERIPHERAL_BUS_EXTERNAL: usize = 0xe0100000 - 0xe0040000;
 
 
+// TODO: finish stack frame
+pub struct StackFrame {
+    align: u32,
+    ptr: u32,
+}
+
+#[derive(Clone)]
+pub enum Mode {
+    Thread,
+    Handle,
+}
+
 #[derive(Clone)]
 pub struct Processor {
     flash: Memory,
     ram: Memory,
     ppbi: Memory,
     ppbe: Memory,
+    nvic: InterruptController,
+    mode: Mode,
     pub registers: Registers,
 }
 
@@ -33,9 +48,14 @@ impl Processor {
             ram: Memory::new(0x20000000, RAM_CAPACITY),
             ppbi: Memory::new(0xE0000000, PRIVATE_PERIPHERAL_BUS_INTERNAL),
             ppbe: Memory::new(0xE0040000, PRIVATE_PERIPHERAL_BUS_EXTERNAL),
+            nvic: InterruptController::new(),
+            mode: Mode::Thread,
             registers: Registers::new(),
         }
     }
+
+    // TODO: make this more accurate
+    fn reset(&mut self) { self.registers = Registers::new() }
 
     pub fn flash_data(&mut self, addr: u16, data: &[u8]) {
         for (offset, byte) in data.iter().enumerate() {
@@ -100,29 +120,43 @@ impl Processor {
         }
     }
 
+    fn push_stack(&mut self) {
+    }
+
+    fn handle_exception(&mut self) {
+        if let Some(exception) = self.nvic.poll() {
+            match exception {
+                Exception::Reset => self.reset(),
+                _ => {},
+            }
+        }
+    }
+
     pub fn step(&mut self) {
         self.execute();
+
+        self.handle_exception();
     }
 }
 
 impl DataBus for Processor {
-    fn read<T>(&self, addr: usize) -> T where T: BitSize {
+    fn read<T>(&mut self, addr: usize) -> T where T: BitSize + Default {
         match addr {
             0x0..0x10004 => self.flash.read(addr),
             0x20000000..0x20003ffc => self.ram.read(addr),
             0xe0000000..0xe0040000 => self.ppbi.read(addr),
             0xe0040000..0xe0100000 => self.ppbe.read(addr),
-            _ => panic!("out of bounds"),
+            _ => { self.nvic.throw(Exception::BusFault); T::default() },
         }
     }
 
-    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize {
+    fn write<T>(&mut self, addr: usize, value: T) where T: BitSize + Default {
         match addr {
             0x0..0x10004 => self.flash.write(addr, value),
             0x20000000..0x20003ffc => self.ram.write(addr, value),
             0xe0000000..0xe0040000 => self.ppbi.write(addr, value),
             0xe0040000..0xe0100000 => self.ppbe.write(addr, value),
-            _ => panic!("out of bounds"),
+            _ => self.nvic.throw(Exception::BusFault),
         }
     }
 }

@@ -37,6 +37,7 @@ impl Into<usize> for Exception {
     }
 }
 
+#[derive(Clone)]
 pub struct Priority {
     priorities: HashMap<Exception, i32>,
 }
@@ -53,9 +54,11 @@ impl Priority {
     }
 }
 
+#[derive(Clone)]
 pub struct InterruptController {
     priority: Priority,
     pending: Vec<Exception>,
+    group: i32,
 }
 
 impl InterruptController {
@@ -69,11 +72,14 @@ impl InterruptController {
         InterruptController {
             priority: Priority::new(priorities),
             pending: Vec::new(),
+            group: 0,
         }
     }
 
     pub fn throw(&mut self, exception: Exception) {
-        self.pending.push(exception);
+        if self.priority.get(exception) < self.group {
+            self.pending.push(exception);
+        }
     }
 
     pub fn poll(&mut self) -> Option<Exception> {
@@ -86,16 +92,6 @@ impl InterruptController {
         });
 
         self.pending.pop()
-    }
-
-    pub fn handle(&mut self) {
-        if let Some(exception) = self.poll() {
-            match exception {
-                Exception::Reset => todo!("reset"),
-                _ => {
-                },
-            }
-        }
     }
 }
 

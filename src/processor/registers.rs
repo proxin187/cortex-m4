@@ -1,5 +1,21 @@
 
 
+// page 429 @ ARMv7M Reference Manual
+#[derive(Clone)]
+pub struct Control {
+    pub private: bool,
+    pub stack: bool,
+}
+
+impl Control {
+    pub fn new(private: bool, stack: bool) -> Control {
+        Control {
+            private,
+            stack,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct APSR {
     value: u32,
@@ -29,6 +45,7 @@ impl APSR {
 pub struct Registers {
     registers: [u32; 16],
     apsr: APSR,
+    pub control: Control,
 }
 
 impl Registers {
@@ -36,6 +53,7 @@ impl Registers {
         Registers {
             registers: [0; 16],
             apsr: APSR::new(),
+            control: Control::new(false, false),
         }
     }
 
