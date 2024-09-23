@@ -43,6 +43,19 @@ impl Thumb16 {
                 rn: (self.opcode.get(3..6) >> 3) as u8,
                 rd: (self.opcode.get(0..3)) as u8,
             },
+            0b0100_0000_0000_0000 => match self.opcode.get(7..16) {
+                0b0100_0111_1000_0000 => InstructionKind::Blx {
+                    rm: (self.opcode.get(3..7) >> 3) as u8,
+                },
+                0b0100_0111_0000_0000 => InstructionKind::Bx {
+                    rm: (self.opcode.get(3..7) >> 3) as u8,
+                },
+                _ => InstructionKind::Undefined,
+            },
+            0b0100_1000_0000_0000 => InstructionKind::Ldr {
+                rt: (self.opcode.get(8..11) >> 8) as u8,
+                source: Source::Imm8((self.opcode.get(0..8) >> 8) as u8),
+            },
             _ => InstructionKind::Undefined,
         }
     }

@@ -1,4 +1,5 @@
 use super::{Processor, Mode};
+use super::decoder::BitVec;
 
 use crate::bus::DataBus;
 
@@ -119,11 +120,9 @@ impl Processor {
     pub fn push_stack(&mut self) {
         let frame = self.frame();
 
-        for (offset, register) in [0, 1, 2, 3, 12, 14].iter().enumerate() {
+        for (offset, register) in [0, 1, 2, 3, 12, 14, 15].iter().enumerate() {
             self.write::<u32>(frame.ptr as usize + (offset * 4), self.registers.get(*register, self.mode));
         }
-
-        self.write::<u32>(frame.ptr as usize + 0x18, self.registers.get(15, self.mode));
 
         self.write::<u32>(frame.ptr as usize + 0x1c, (self.registers.psr.value & !(1 << 9)) | ((frame.align as u32) << 9));
 
@@ -136,11 +135,32 @@ impl Processor {
         }
     }
 
-    // TODO: this is not done!
-    pub fn exception_taken(&mut self, exception: Exception) {
+    pub fn pop_stack(&mut self, frame: Frame, exc_return: u32) {
+        for (offset, register) in [0, 1, 2, 3, 12, 14, 15].iter().enumerate() {
+            let value = self.read::<u32>(frame.ptr as usize + (offset * 4));
+
+            self.registers.set(*register, |_| value, self.mode);
+        }
+
+        self.registers.psr.value = self.read::<u32>(frame.ptr as usize + 0x1c);
+
+        match exc_return.get(0..4) {
+            0b0001 | 0b1001 => {
+                self.registers.sp.msp = (self.registers.sp.msp + 0x20) | (self.registers.psr.get(9) as u32) << 2;
+            },
+            0b1101 => {
+                self.registers.sp.psp = (self.registers.sp.psp + 0x20) | (self.registers.psr.get(9) as u32) << 2;
+            },
+            _ => {},
+        }
+    }
+
+    pub fn exception_entry(&mut self, exception: Exception) {
         self.mode = Mode::Handle;
 
         self.registers.control.stack = false;
+
+        self.registers.psr.value |= Into::<usize>::into(exception) as u32 & 0xff;
 
         let handler = self.read::<u32>(self.registers.vtor.addr() as usize + Into::<usize>::into(exception) * 4);
 
@@ -148,6 +168,29 @@ impl Processor {
 
         if (handler & 1) != 0 {
             self.registers.psr.set(24);
+        }
+    }
+
+    pub fn exception_return(&mut self, exc_return: u32) {
+        match exc_return.get(0..4) {
+            0b0001 | 0b1001 => {
+                self.mode = exc_return.get(0..4)
+                    .eq(&0b0001)
+                    .then(|| Mode::Handle)
+                    .unwrap_or(Mode::Thread);
+
+                self.registers.control.stack = false;
+
+                self.pop_stack(Frame {
+                    align: false,
+                    ptr: self.registers.sp.msp,
+                }, exc_return);
+            },
+            0b1101 => {
+            },
+            _ => {
+                self.nvic.throw(Exception::UsageFault);
+            },
         }
     }
 }

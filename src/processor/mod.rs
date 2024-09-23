@@ -57,6 +57,9 @@ impl Processor {
         loop {
             let record = hex.next()?;
 
+            // TODO: find out how to specify entry point with intel hex
+            println!("record: {:?}", record);
+
             match record.kind {
                 Kind::Data => {
                     self.flash_data(record.addr, &record.data);
@@ -106,6 +109,20 @@ impl Processor {
 
                 self.registers.set(rd, |_| result, self.mode);
             },
+            InstructionKind::Blx { rm } => {
+            },
+            InstructionKind::Bx { rm } => {
+                let addr = self.registers.get(rm, self.mode);
+
+                if addr & 0xf0000000 == 0xf0000000 {
+                    self.exception_return(addr & !(0xf0000000));
+                } else {
+                    self.registers.set(15, |_| addr, self.mode);
+                }
+            },
+            InstructionKind::Ldr { rt, source } => {
+                self.registers.set(rt, |value| value + Into::<u32>::into(source), self.mode);
+            },
             InstructionKind::Undefined => panic!("undefined behaviour"),
         }
     }
@@ -117,7 +134,7 @@ impl Processor {
                 _ => {
                     self.push_stack();
 
-                    self.exception_taken(exception);
+                    self.exception_entry(exception);
                 },
             }
         }
