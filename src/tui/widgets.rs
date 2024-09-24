@@ -1,4 +1,4 @@
-use super::{Command, Processor};
+use super::Processor;
 
 use crate::processor::instruction::{Instruction, InstructionKind};
 use crate::processor::registers::Registers;
@@ -177,7 +177,7 @@ impl InstructionWidget {
     }
 }
 
-pub fn draw<'a, 'b>(frame: &'b mut Frame<'a>, command: Command, processor: Processor) {
+pub fn draw<'a, 'b>(frame: &'b mut Frame<'a>, processor: Processor) {
     let mut widgets = Widgets::new(frame, processor);
 
     widgets.draw();

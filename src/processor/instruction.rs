@@ -36,6 +36,10 @@ pub enum InstructionKind {
         rt: u8,
         source: Source,
     },
+    Str {
+        rt: u8,
+        rn: u8,
+    },
     Undefined,
 }
 
@@ -44,9 +48,10 @@ impl std::fmt::Display for InstructionKind {
         match self {
             InstructionKind::Mov { register, source } => f.write_fmt(format_args!("mov r{}, {}", register, Into::<u32>::into(source.clone()))),
             InstructionKind::Add { rm, rn, rd } => f.write_fmt(format_args!("add r{}, r{}, r{}", rd, rn, rm)),
-            InstructionKind::Blx { rm } => f.write_fmt(format_args!("bx r{}", rm)),
+            InstructionKind::Blx { rm } => f.write_fmt(format_args!("blx r{}", rm)),
             InstructionKind::Bx { rm } => f.write_fmt(format_args!("bx r{}", rm)),
-            InstructionKind::Ldr { rt, source } => f.write_fmt(format_args!("mov r{}, {}", rt, Into::<u32>::into(source.clone()))),
+            InstructionKind::Ldr { rt, source } => f.write_fmt(format_args!("ldr r{}, ={}", rt, Into::<u32>::into(source.clone()))),
+            InstructionKind::Str { rt, rn } => f.write_fmt(format_args!("ldr r{}, [r{}]", rt, rn)),
             InstructionKind::Undefined => f.write_fmt(format_args!("undefined")),
         }
     }

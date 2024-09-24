@@ -1,5 +1,5 @@
 use super::decoder::BitVec;
-use super::Mode;
+use super::{Mode, RAM_CAPACITY};
 
 use crate::bus::BitSize;
 
@@ -27,10 +27,10 @@ pub struct StackPointer {
 }
 
 impl StackPointer {
-    pub fn new(msp: u32, psp: u32) -> StackPointer {
+    pub fn new(sp: u32) -> StackPointer {
         StackPointer {
-            msp,
-            psp,
+            msp: sp,
+            psp: sp,
         }
     }
 
@@ -126,7 +126,7 @@ impl Registers {
             // TODO: initialize this with a default vector table
             vtor: Vtor::new(TableBase::Code, 0),
             psr: PSR::new(),
-            sp: StackPointer::new(0, 0),
+            sp: StackPointer::new((0x20000000 + RAM_CAPACITY) as u32),
             control: Control::new(false, false),
         }
     }

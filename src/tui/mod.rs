@@ -6,7 +6,6 @@ use ratatui::prelude::*;
 use crossterm::{terminal, event::{self, *}, ExecutableCommand};
 
 use std::time::Duration;
-use std::sync::{Arc, Mutex};
 use std::io;
 
 macro_rules! lock {
@@ -15,46 +14,33 @@ macro_rules! lock {
     }
 }
 
-
-#[derive(Clone)]
-pub struct Command {
-    inner: Arc<Mutex<String>>,
-    cursor: i32,
+pub enum Step {
+    Once,
+    Forever,
+    Never,
 }
 
-impl Command {
-    pub fn new() -> Command {
-        Command {
-            inner: Arc::new(Mutex::new(String::new())),
-            cursor: 0,
+impl Step {
+    pub fn should_step(&mut self) -> bool {
+        match *self {
+            Step::Once => { *self = Step::Never; true },
+            Step::Forever => true,
+            Step::Never => false,
         }
     }
 
-    pub fn move_cursor(&mut self, value: i32) {
-        self.cursor += value.min(-self.cursor);
-    }
-
-    pub fn insert(&mut self, character: char) -> Result<(), Box<dyn std::error::Error>> {
-        lock!(self.inner)?.insert(self.cursor as usize, character);
-
-        self.move_cursor(1);
-
-        Ok(())
-    }
-
-    pub fn remove(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        lock!(self.inner)?.remove(self.cursor as usize);
-
-        self.move_cursor(-1);
-
-        Ok(())
+    pub fn toggle(&mut self) {
+        match *self {
+            Step::Once | Step::Forever => *self = Step::Never,
+            Step::Never => *self = Step::Forever,
+        }
     }
 }
 
 pub struct Tui {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
     processor: Processor,
-    command: Command,
+    step: Step,
     should_close: bool,
 }
 
@@ -66,16 +52,15 @@ impl Tui {
         Ok(Tui {
             terminal: Terminal::new(CrosstermBackend::new(io::stdout()))?,
             processor: Processor::new(),
-            command: Command::new(),
+            step: Step::Never,
             should_close: false,
         })
     }
 
     fn handle_keypress(&mut self, keycode: KeyCode) -> Result<(), Box<dyn std::error::Error>> {
         match keycode {
-            KeyCode::Char(character) => self.command.insert(character)?,
-            KeyCode::Backspace => self.command.remove()?,
-            KeyCode::Enter => self.processor.step(),
+            KeyCode::Char(' ') => self.step.toggle(),
+            KeyCode::Enter => self.step = Step::Once,
             KeyCode::Esc => self.should_close = true,
             _ => {},
         }
@@ -115,12 +100,15 @@ impl Tui {
         while !self.should_close {
             self.poll_event()?;
 
-            let command = self.command.clone();
             let processor = self.processor.clone();
 
             self.terminal.draw(move |frame| {
-                widgets::draw(frame, command, processor);
+                widgets::draw(frame, processor);
             })?;
+
+            if self.step.should_step() {
+                self.processor.step();
+            }
         }
 
         io::stdout().execute(terminal::LeaveAlternateScreen)?;

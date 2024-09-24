@@ -56,6 +56,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             processor.flash(&rom)?;
 
+            for _ in 0..6 {
+                println!("inst: {:?}", processor.fetch());
+            }
+
             // TODO: finish the minimal interface
         },
     }

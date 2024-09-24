@@ -82,7 +82,7 @@ impl InterruptController {
         InterruptController {
             priority: Priority::new(priorities),
             pending: Vec::new(),
-            group: 0,
+            group: 1,
         }
     }
 

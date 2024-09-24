@@ -12,8 +12,8 @@ use registers::Registers;
 use decoder::Decoder;
 use fault::{InterruptController, Exception};
 
-const RAM_CAPACITY: usize = 16380;
-const FLASH_CAPACITY: usize = 65540;
+pub const RAM_CAPACITY: usize = 16380;
+pub const FLASH_CAPACITY: usize = 65540;
 
 
 #[derive(Clone, Copy, PartialEq)]
@@ -56,9 +56,6 @@ impl Processor {
 
         loop {
             let record = hex.next()?;
-
-            // TODO: find out how to specify entry point with intel hex
-            println!("record: {:?}", record);
 
             match record.kind {
                 Kind::Data => {
@@ -110,6 +107,7 @@ impl Processor {
                 self.registers.set(rd, |_| result, self.mode);
             },
             InstructionKind::Blx { rm } => {
+                self.nvic.throw(Exception::UsageFault);
             },
             InstructionKind::Bx { rm } => {
                 let addr = self.registers.get(rm, self.mode);
@@ -121,7 +119,16 @@ impl Processor {
                 }
             },
             InstructionKind::Ldr { rt, source } => {
-                self.registers.set(rt, |value| value + Into::<u32>::into(source), self.mode);
+                let pc = self.registers.get(15, self.mode);
+                let data = self.read((pc + Into::<u32>::into(source)) as usize);
+
+                self.registers.set(rt, |_| data, self.mode);
+            },
+            InstructionKind::Str { rt, rn } => {
+                let value = self.registers.get(rt, self.mode);
+                let addr = self.registers.get(rn, self.mode);
+
+                self.write::<u32>(addr as usize, value);
             },
             InstructionKind::Undefined => panic!("undefined behaviour"),
         }
