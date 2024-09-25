@@ -16,10 +16,8 @@ impl Thumb32 {
         }
     }
 
-    // TODO: we hit this condition meaning there is a thumb32 instruction that we have not
-    // implemented, most likely some sort of STR instruction.
     pub fn decode(&self, halfword: u16) -> InstructionKind {
-        todo!("implement thumb32 instructions");
+        InstructionKind::Undefined
     }
 }
 
@@ -57,6 +55,11 @@ impl Thumb16 {
             0b0100_1000_0000_0000 => InstructionKind::Ldr {
                 rt: (self.opcode.get(8..11) >> 8) as u8,
                 source: Source::Imm8((self.opcode.get(0..8)) as u8),
+            },
+            0b0101_1000_0000_0000 => InstructionKind::LdrReg {
+                rm: (self.opcode.get(6..9) >> 6) as u8,
+                rn: (self.opcode.get(3..6) >> 3) as u8,
+                rt: self.opcode.get(0..3) as u8,
             },
             0b0110_0000_0000_0000 => InstructionKind::Str {
                 rt: self.opcode.get(0..3) as u8,

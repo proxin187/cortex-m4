@@ -63,6 +63,9 @@ impl Processor {
                 },
                 Kind::ExtendSegmentAddress => {},
                 Kind::StartSegmentAddress => {
+                    let entry = u32::from_be_bytes([0, 0, record.data[2], record.data[3]]);
+
+                    self.registers.set(15, |_| entry, self.mode);
                 },
                 Kind::ExtendLinearAddress => {},
                 Kind::StartLinearAddress => {},
@@ -97,6 +100,8 @@ impl Processor {
     fn execute(&mut self) {
         let inst = self.fetch();
 
+        println!("inst: {:?}", inst);
+
         match inst.kind {
             InstructionKind::Mov { register, source } => {
                 self.registers.set(register, |_| source.into(), self.mode);
@@ -120,13 +125,25 @@ impl Processor {
             },
             InstructionKind::Ldr { rt, source } => {
                 let pc = self.registers.get(15, self.mode);
-                let data = self.read((pc + Into::<u32>::into(source)) as usize);
+
+                // TODO: maybe the pc is incremented before we want it to?
+                println!("pc: {}", pc);
+
+                // here we get the right answer if we add 1, this is wierd? lol
+                let data = self.read::<u32>((inst.addr + 1 + Into::<u32>::into(source)) as usize);
+
+                println!("data: {}", data);
 
                 self.registers.set(rt, |_| data, self.mode);
+            },
+            InstructionKind::LdrReg { rm, rn, rt } => {
+                // TODO: implement ldr (register)
             },
             InstructionKind::Str { rt, rn } => {
                 let value = self.registers.get(rt, self.mode);
                 let addr = self.registers.get(rn, self.mode);
+
+                println!("addr: {}, value: {}", addr, value);
 
                 self.write::<u32>(addr as usize, value);
             },

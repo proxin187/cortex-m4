@@ -4,6 +4,8 @@ mod bus;
 mod loader;
 mod tui;
 
+// TODO: maybe try to use c
+
 use processor::Processor;
 use tui::Tui;
 
@@ -56,8 +58,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             processor.flash(&rom)?;
 
-            for _ in 0..6 {
-                println!("inst: {:?}", processor.fetch());
+            for _ in 0..12 {
+                processor.step();
             }
 
             // TODO: finish the minimal interface

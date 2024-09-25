@@ -36,6 +36,11 @@ pub enum InstructionKind {
         rt: u8,
         source: Source,
     },
+    LdrReg {
+        rm: u8,
+        rn: u8,
+        rt: u8,
+    },
     Str {
         rt: u8,
         rn: u8,
@@ -51,7 +56,8 @@ impl std::fmt::Display for InstructionKind {
             InstructionKind::Blx { rm } => f.write_fmt(format_args!("blx r{}", rm)),
             InstructionKind::Bx { rm } => f.write_fmt(format_args!("bx r{}", rm)),
             InstructionKind::Ldr { rt, source } => f.write_fmt(format_args!("ldr r{}, ={}", rt, Into::<u32>::into(source.clone()))),
-            InstructionKind::Str { rt, rn } => f.write_fmt(format_args!("ldr r{}, [r{}]", rt, rn)),
+            InstructionKind::LdrReg { rm, rn, rt } => f.write_fmt(format_args!("ldr r{}, [r{}, r{}]", rt, rn, rm)),
+            InstructionKind::Str { rt, rn } => f.write_fmt(format_args!("str r{}, [r{}]", rt, rn)),
             InstructionKind::Undefined => f.write_fmt(format_args!("undefined")),
         }
     }
