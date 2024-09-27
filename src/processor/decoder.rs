@@ -52,6 +52,9 @@ impl Thumb16 {
                 },
                 _ => InstructionKind::Undefined,
             },
+            0b1110_0000_0000_0000 => InstructionKind::B {
+                imm11: self.opcode.get(0..11).extend(11),
+            },
             0b0100_1000_0000_0000 => InstructionKind::Ldr {
                 rt: (self.opcode.get(8..11) >> 8) as u8,
                 source: Source::Imm8((self.opcode.get(0..8)) as u8),
@@ -97,6 +100,16 @@ impl BitVec for u16 {
 impl BitVec for u32 {
     fn get(&self, range: Range<u8>) -> Self {
         *self & range.fold(0, |acc, bit| acc | (1u32 << bit))
+    }
+}
+
+pub trait SignExtend<T> {
+    fn extend(&self, topbit: i16) -> T;
+}
+
+impl SignExtend<i16> for u16 {
+    fn extend(&self, topbit: i16) -> i16 {
+        *self as i16 | ((1 << (16 - topbit)) - 1) << topbit
     }
 }
 

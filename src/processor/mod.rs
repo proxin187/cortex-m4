@@ -90,7 +90,7 @@ impl Processor {
                 self.registers.set(15, |pc| pc + 4, self.mode);
 
                 Instruction {
-                    kind: thumb32.decode(self.read::<u16>(self.registers.get(15, self.mode) as usize - 1)),
+                    kind: thumb32.decode(self.read::<u16>(self.registers.get(15, self.mode) as usize - 2)),
                     addr: self.registers.get(15, self.mode) - 4,
                 }
             },
@@ -123,6 +123,9 @@ impl Processor {
                     self.registers.set(15, |_| addr, self.mode);
                 }
             },
+            InstructionKind::B { imm11 } => {
+                self.registers.set(15, |pc| (pc as i16 + imm11) as u32, self.mode);
+            },
             InstructionKind::Ldr { rt, source } => {
                 let pc = self.registers.get(15, self.mode);
 
@@ -130,7 +133,7 @@ impl Processor {
                 println!("pc: {}", pc);
 
                 // here we get the right answer if we add 1, this is wierd? lol
-                let data = self.read::<u32>((inst.addr + 1 + Into::<u32>::into(source)) as usize);
+                let data = self.read::<u32>((inst.addr + Into::<u32>::into(source)) as usize);
 
                 println!("data: {}", data);
 

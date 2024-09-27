@@ -1,3 +1,28 @@
+    .syntax unified
+
+    .section .text
+
+    .global vtable
+    .global reset_handler
+
+vtable:
+    .word _estack
+    .word reset_handler
+    .size vtable, .-vtable
+
+reset_handler:
+    ldr r4, =apa
+
+    // ldr r1, =_flash_dstart
+
+done:
+    b done
+
+    .section .data
+
+apa:    .word 0xFEEBDAED
+
+/*
     .text
 _start: .global _start
     // load the variable into memory
@@ -16,7 +41,6 @@ _start: .global _start
 .LCPI0_0:
     .long 69
 
-/*
     .text
 _start: .global _start
     mov r1, #34
@@ -37,7 +61,9 @@ init_vtor:
 
     // NOTE: this may be wrong, looks right
     ldr r4, =__isr_vector
-    ldr r5, =__vtor_addr
+    ldr r5, =vtor_addr
+
+    ldr r6, =0x12345678
 
     str r4, [r5]
 
@@ -54,9 +80,9 @@ UsageFault_Handler:
     ldr r2, =UsageFault_Handler
     bx r2
 
-
-__vtor_addr:
-    .long   3758157064
+vtor_addr:
+    .long   420
+    // .long   3758157064
 
 __isr_vector:
     .long   0 // __StackTop
@@ -76,4 +102,5 @@ __isr_vector:
     .long   0 // PendSV_Handler
     .long   0 // SysTick_Handler
 */
+
 
