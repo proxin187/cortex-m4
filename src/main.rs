@@ -1,10 +1,7 @@
 mod processor;
 mod memory;
 mod bus;
-mod loader;
 mod tui;
-
-// TODO: maybe try to use c
 
 use processor::Processor;
 use tui::Tui;
@@ -37,6 +34,7 @@ enum Command {
     },
 }
 
+// TODO: write a sandbox without emulating, overwrite syscalls
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -57,6 +55,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut processor = Processor::new();
 
             processor.flash(&rom)?;
+
+            processor.reset();
 
             for _ in 0..12 {
                 processor.step();

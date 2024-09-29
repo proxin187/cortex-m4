@@ -94,7 +94,7 @@ pub struct Vtor {
 impl Vtor {
     pub fn new(base: TableBase, offset: u32) -> Vtor {
         Vtor {
-            value: (base.value() << 29) | offset << 28,
+            value: (base.value() << 29) | offset << 7,
         }
     }
 
@@ -123,7 +123,6 @@ impl Registers {
     pub fn new() -> Registers {
         Registers {
             registers: [0; 16],
-            // TODO: initialize this with a default vector table
             vtor: Vtor::new(TableBase::Code, 0),
             psr: PSR::new(),
             sp: StackPointer::new((0x20000000 + RAM_CAPACITY) as u32),
@@ -134,6 +133,7 @@ impl Registers {
     pub fn set<F>(&mut self, register: u8, f: F, mode: Mode) where F: Fn(u32) -> u32 {
         match register {
             13 => self.sp.set(self.control, mode, |value| f(value)),
+            15 => self.registers[register as usize] = f(self.registers[register as usize]) & 0xfffffffe,
             _ => self.registers[register as usize] = f(self.registers[register as usize]),
         }
     }
@@ -141,6 +141,7 @@ impl Registers {
     pub fn get(&self, register: u8, mode: Mode) -> u32 {
         match register {
             13 => self.sp.get(self.control, mode),
+            15 => self.registers[register as usize] + 4,
             _ => self.registers[register as usize],
         }
     }

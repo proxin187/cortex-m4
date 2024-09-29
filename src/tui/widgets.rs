@@ -2,6 +2,7 @@ use super::Processor;
 
 use crate::processor::instruction::{Instruction, InstructionKind};
 use crate::processor::registers::Registers;
+use crate::processor::Mode;
 
 use ratatui::style::palette::tailwind;
 use ratatui::{prelude::*, widgets::*};
@@ -30,13 +31,19 @@ impl<'a, 'b> Widgets<'a, 'b> {
     pub fn new(frame: &'b mut Frame<'a>, mut processor: Processor) -> Widgets<'a, 'b> {
         let registers = processor.registers.clone();
 
-        let mut instructions = vec![Instruction { kind: InstructionKind::Undefined, addr: 0 }; 16];
+        let mut instructions = vec![Instruction { kind: InstructionKind::Undefined, addr: 0, size: 2, }; 16];
 
-        instructions.fill_with(|| processor.fetch());
+        instructions.fill_with(|| {
+            let inst = processor.fetch();
+
+            processor.registers.set(15, |pc| pc + 2, processor.mode);
+
+            inst
+        });
 
         Widgets {
             frame,
-            registers: RegisterWidget::new(registers.clone()),
+            registers: RegisterWidget::new(registers.clone(), processor.mode),
             instruction: InstructionWidget::new(instructions),
         }
     }
@@ -95,12 +102,14 @@ impl<'a, 'b> Widgets<'a, 'b> {
 
 pub struct RegisterWidget {
     registers: Registers,
+    mode: Mode,
 }
 
 impl RegisterWidget {
-    pub fn new(registers: Registers) -> RegisterWidget {
+    pub fn new(registers: Registers, mode: Mode) -> RegisterWidget {
         RegisterWidget {
             registers,
+            mode,
         }
     }
 
@@ -110,9 +119,13 @@ impl RegisterWidget {
             .enumerate()
             .map(|(register, value)| {
                 let row = match register {
-                    13 => Row::new([format!("r{}", register), format!("{}", value), String::from("Stack Pointer")]),
-                    14 => Row::new([format!("r{}", register), format!("{}", value), String::from("Link Register")]),
-                    15 => Row::new([format!("r{}", register), format!("{}", value), String::from("Program Counter")]),
+                    13 => Row::new([
+                        format!("sp"),
+                        format!("{}", self.registers.sp.get(self.registers.control, self.mode)),
+                        String::from("Stack Pointer")
+                    ]),
+                    14 => Row::new([format!("lr"), format!("{}", value), String::from("Link Register")]),
+                    15 => Row::new([format!("pc"), format!("{}", value), String::from("Program Counter")]),
                     _ => Row::new([format!("r{}", register), format!("{}", value), String::from("Generic")]),
                 };
 

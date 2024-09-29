@@ -5,22 +5,33 @@
     .global vtable
     .global reset_handler
 
+// Every time when ARM M3 has reset,
+// by default it takes value from address 0x00000000 and put it to SP register and value from address 0x00000004 to PC.
+// This is start point for bootcode execution.
+// This happens because VTOR register is by default set to 0 and vector table start address are set at 0x0000000.
+
+// vector table address defaults to 0x00000000
 vtable:
     .word _estack
     .word reset_handler
     .size vtable, .-vtable
 
 reset_handler:
-    ldr r4, =apa
+    ldr r4, =apa2
+    ldr r5, =apa
 
-    // ldr r1, =_flash_dstart
+    ldr r5, [r5]
 
 done:
     b done
 
     .section .data
 
-apa:    .word 0xFEEBDAED
+apa:    .word 69
+apa3:   .word 61
+apa4:   .word 62
+apa5:   .word 63
+apa2:   .word 68
 
 /*
     .text

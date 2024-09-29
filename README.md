@@ -1,13 +1,17 @@
-# Cortex-m4
+<div align="center">
 
-A pure rust nRF52833/cortex-m4 emulator created by a dude with zero arm experience.
+# Crtx
+
+An easy-to-use nRF52833/cortex-m4 emulator that that makes debugging and developing for cortex-m4 chips easier.
+
+</div>
 
 
 # Roadmap
-- [x] Intel Hex Loader
+- [x] Elf Loader
 - [x] Instruction decoder
 - [x] interactive interface with disassembly
-- [ ] Faults and Exceptions (in progress)
+- [x] Faults and Exceptions
 
 
 # License

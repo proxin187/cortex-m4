@@ -4,13 +4,13 @@ mod decoder;
 mod fault;
 
 use crate::bus::{DataBus, BitSize};
-use crate::loader::{Hex, Kind};
 use crate::memory::Memory;
 
 use instruction::{Instruction, InstructionKind};
 use registers::Registers;
 use decoder::Decoder;
 use fault::{InterruptController, Exception};
+use object::{File, Object, ObjectSection, SectionKind};
 
 pub const RAM_CAPACITY: usize = 16380;
 pub const FLASH_CAPACITY: usize = 65540;
@@ -27,7 +27,7 @@ pub struct Processor {
     flash: Memory,
     ram: Memory,
     nvic: InterruptController,
-    mode: Mode,
+    pub mode: Mode,
     pub registers: Registers,
 }
 
@@ -42,34 +42,39 @@ impl Processor {
         }
     }
 
-    // TODO: make this more accurate, this is only a rough sketch of how reset works
-    fn reset(&mut self) { self.registers = Registers::new() }
+    fn load_vtor(&mut self, handler_offset: usize) {
+        let addr = self.registers.vtor.addr();
+        let handler = self.read::<u32>(addr as usize + handler_offset);
 
-    pub fn flash_data(&mut self, addr: u16, data: &[u8]) {
+        self.registers.sp.msp = self.read::<u32>(addr as usize) & 0xfffffffc;
+        self.registers.sp.psp = 0;
+
+        self.registers.set(15, |_| handler, self.mode);
+    }
+
+    pub fn reset(&mut self) {
+        self.registers = Registers::new();
+
+        self.mode = Mode::Thread;
+
+        self.load_vtor(4);
+    }
+
+    pub fn flash_data(&mut self, addr: usize, data: &[u8]) {
         for (offset, byte) in data.iter().enumerate() {
-            self.flash.write::<u8>(addr as usize + offset, *byte);
+            self.write::<u8>(addr as usize + offset, *byte);
         }
     }
 
     pub fn flash(&mut self, rom: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-        let mut hex = Hex::new(rom)?;
+        let file = File::parse(rom)?;
 
-        loop {
-            let record = hex.next()?;
-
-            match record.kind {
-                Kind::Data => {
-                    self.flash_data(record.addr, &record.data);
+        for section in file.sections() {
+            match section.kind() {
+                SectionKind::Text | SectionKind::Data => {
+                    self.flash_data(section.address() as usize, section.data()?);
                 },
-                Kind::ExtendSegmentAddress => {},
-                Kind::StartSegmentAddress => {
-                    let entry = u32::from_be_bytes([0, 0, record.data[2], record.data[3]]);
-
-                    self.registers.set(15, |_| entry, self.mode);
-                },
-                Kind::ExtendLinearAddress => {},
-                Kind::StartLinearAddress => {},
-                Kind::Eof => break,
+                _ => {},
             }
         }
 
@@ -77,21 +82,19 @@ impl Processor {
     }
 
     pub fn fetch(&mut self) -> Instruction {
-        match Decoder::new(self.read::<u16>(self.registers.get(15, self.mode) as usize)) {
+        match Decoder::new(self.read::<u16>(self.registers.get(15, self.mode) as usize - 4)) {
             Decoder::Thumb16(thumb16) => {
-                self.registers.set(15, |pc| pc + 2, self.mode);
-
                 Instruction {
                     kind: thumb16.decode(),
-                    addr: self.registers.get(15, self.mode) - 2,
+                    addr: self.registers.get(15, self.mode) - 4,
+                    size: 2,
                 }
             },
             Decoder::Thumb32(thumb32) => {
-                self.registers.set(15, |pc| pc + 4, self.mode);
-
                 Instruction {
                     kind: thumb32.decode(self.read::<u16>(self.registers.get(15, self.mode) as usize - 2)),
-                    addr: self.registers.get(15, self.mode) - 4,
+                    addr: self.registers.get(15, self.mode) - 8,
+                    size: 4,
                 }
             },
         }
@@ -99,8 +102,6 @@ impl Processor {
 
     fn execute(&mut self) {
         let inst = self.fetch();
-
-        println!("inst: {:?}", inst);
 
         match inst.kind {
             InstructionKind::Mov { register, source } => {
@@ -127,31 +128,63 @@ impl Processor {
                 self.registers.set(15, |pc| (pc as i16 + imm11) as u32, self.mode);
             },
             InstructionKind::Ldr { rt, source } => {
-                let pc = self.registers.get(15, self.mode);
+                /*
+                    base: 12
+                    imm32: 4
+                    address: 16
+                    data: 536870928
 
-                // TODO: maybe the pc is incremented before we want it to?
-                println!("pc: {}", pc);
+                    base: 12
+                    imm32: 8
+                    address: 20
+                    data: 536870912
+                */
 
-                // here we get the right answer if we add 1, this is wierd? lol
-                let data = self.read::<u32>((inst.addr + Into::<u32>::into(source)) as usize);
+                let pc = 4 * (self.registers.get(15, self.mode) / 4);
+                // let pc = 4 * (pc / 4);
 
-                println!("data: {}", data);
+                // println!("base: {}", pc);
+                // println!("imm32: {:?}", source);
 
-                self.registers.set(rt, |_| data, self.mode);
+                /*
+                for addr in 0..33 {
+                    println!("{:x?}: {:x?}", addr, self.read::<u8>(addr));
+                }
+                */
+
+                // TODO: maybe we are loading the program wrong as the addresses are valid in zmu
+                // println!("address: {}", (pc + Into::<u32>::into(source)) as usize);
+
+                // println!("{}", u16::from_le_bytes([0, 32]));
+
+                let data = self.read::<u32>((pc + Into::<u32>::into(source)) as usize);
+
+                // println!("data: {}", data);
+
+                self.registers.set(rt, |_| data as u32, self.mode);
             },
             InstructionKind::LdrReg { rm, rn, rt } => {
                 // TODO: implement ldr (register)
+            },
+            InstructionKind::LdrImm { source, rn, rt } => {
+                let addr = self.registers.get(rn, self.mode) + Into::<u32>::into(source);
+
+                let data = self.read::<u32>(addr as usize);
+
+                self.registers.set(rt, |_| data, self.mode);
             },
             InstructionKind::Str { rt, rn } => {
                 let value = self.registers.get(rt, self.mode);
                 let addr = self.registers.get(rn, self.mode);
 
-                println!("addr: {}, value: {}", addr, value);
+                // println!("addr: {}, value: {}", addr, value);
 
                 self.write::<u32>(addr as usize, value);
             },
             InstructionKind::Undefined => panic!("undefined behaviour"),
         }
+
+        self.registers.set(15, |pc| pc + inst.size, self.mode);
     }
 
     fn handle_exception(&mut self) {

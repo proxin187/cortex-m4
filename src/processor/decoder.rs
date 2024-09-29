@@ -57,10 +57,15 @@ impl Thumb16 {
             },
             0b0100_1000_0000_0000 => InstructionKind::Ldr {
                 rt: (self.opcode.get(8..11) >> 8) as u8,
-                source: Source::Imm8((self.opcode.get(0..8)) as u8),
+                source: Source::Imm32((self.opcode.get(0..8) as u32) << 2),
             },
             0b0101_1000_0000_0000 => InstructionKind::LdrReg {
                 rm: (self.opcode.get(6..9) >> 6) as u8,
+                rn: (self.opcode.get(3..6) >> 3) as u8,
+                rt: self.opcode.get(0..3) as u8,
+            },
+            0b0110_1000_0000_0000 => InstructionKind::LdrImm {
+                source: Source::Imm8((self.opcode.get(6..11) >> 6) as u8),
                 rn: (self.opcode.get(3..6) >> 3) as u8,
                 rt: self.opcode.get(0..3) as u8,
             },

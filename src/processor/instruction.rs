@@ -4,6 +4,7 @@
 pub enum Source {
     Imm8(u8),
     Imm16(u16),
+    Imm32(u32),
 }
 
 impl Into<u32> for Source {
@@ -11,6 +12,7 @@ impl Into<u32> for Source {
         match self {
             Source::Imm8(value) => value as u32,
             Source::Imm16(value) => value as u32,
+            Source::Imm32(value) => value,
         }
     }
 }
@@ -44,6 +46,11 @@ pub enum InstructionKind {
         rn: u8,
         rt: u8,
     },
+    LdrImm {
+        source: Source,
+        rn: u8,
+        rt: u8,
+    },
     Str {
         rt: u8,
         rn: u8,
@@ -61,6 +68,7 @@ impl std::fmt::Display for InstructionKind {
             InstructionKind::B { imm11 } => f.write_fmt(format_args!("b {}", imm11)),
             InstructionKind::Ldr { rt, source } => f.write_fmt(format_args!("ldr r{}, ={}", rt, Into::<u32>::into(source.clone()))),
             InstructionKind::LdrReg { rm, rn, rt } => f.write_fmt(format_args!("ldr r{}, [r{}, r{}]", rt, rn, rm)),
+            InstructionKind::LdrImm { source, rn, rt } => f.write_fmt(format_args!("ldr r{}, [r{}, #{}]", rt, rn, Into::<u32>::into(source.clone()))),
             InstructionKind::Str { rt, rn } => f.write_fmt(format_args!("str r{}, [r{}]", rt, rn)),
             InstructionKind::Undefined => f.write_fmt(format_args!("undefined")),
         }
@@ -71,6 +79,7 @@ impl std::fmt::Display for InstructionKind {
 pub struct Instruction {
     pub kind: InstructionKind,
     pub addr: u32,
+    pub size: u32,
 }
 
 

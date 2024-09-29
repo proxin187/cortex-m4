@@ -8,11 +8,6 @@ use crossterm::{terminal, event::{self, *}, ExecutableCommand};
 use std::time::Duration;
 use std::io;
 
-macro_rules! lock {
-    ($mutex:expr) => {
-        $mutex.lock().map_err(|_| Into::<Box<dyn std::error::Error>>::into("failed to lock"))
-    }
-}
 
 pub enum Step {
     Once,
@@ -97,6 +92,8 @@ impl Tui {
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.processor.reset();
+
         while !self.should_close {
             self.poll_event()?;
 

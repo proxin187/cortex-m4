@@ -156,18 +156,23 @@ impl Processor {
     }
 
     pub fn exception_entry(&mut self, exception: Exception) {
-        self.mode = Mode::Handle;
+        match exception {
+            Exception::Reset => self.reset(),
+            _ => {
+                self.mode = Mode::Handle;
 
-        self.registers.control.stack = false;
+                self.registers.control.stack = false;
 
-        self.registers.psr.value |= Into::<usize>::into(exception) as u32 & 0xff;
+                self.registers.psr.value |= Into::<usize>::into(exception) as u32 & 0xff;
 
-        let handler = self.read::<u32>(self.registers.vtor.addr() as usize + Into::<usize>::into(exception) * 4);
+                let handler = self.read::<u32>(self.registers.vtor.addr() as usize + Into::<usize>::into(exception) * 4);
 
-        self.registers.set(15, |_| handler, self.mode);
+                self.registers.set(15, |_| handler, self.mode);
 
-        if (handler & 1) != 0 {
-            self.registers.psr.set(24);
+                if (handler & 1) != 0 {
+                    self.registers.psr.set(24);
+                }
+            },
         }
     }
 

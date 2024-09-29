@@ -9,3 +9,4 @@ crossterm = "0.28.1"
 num = "0.4.3"
 ratatui = "0.28.1"
 clap =  { version = "4.5.1", features = ["derive"] }
+object = "0.36.4"
