@@ -34,7 +34,7 @@ enum Command {
     },
 }
 
-// TODO: write a sandbox without emulating, overwrite syscalls
+// TODO: project idea: write a sandbox without emulating, overwrite syscalls
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();

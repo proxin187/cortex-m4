@@ -13,12 +13,29 @@ An easy-to-use nRF52833/cortex-m4 emulator that that makes debugging and develop
 > Cortez is still a work-in-progess project, only a small subset of the armv7m instruction set is implemented.
 
 
-# Roadmap
-- [x] Elf Loader
-- [x] Instruction decoder
-- [x] interactive interface with disassembly
-- [x] Faults and Exceptions
+# Features
+- [x] ELF Loader
+- [x] Two Interfaces: Interactive/Minimal
+- [x] Disassembly viewer
+- [x] Easy-to-use
+- [ ] Configurable peripherals and memory regions (coming soon)
 
+
+# Usage
+
+```
+Usage: cortex-m4 [OPTIONS] <COMMAND>
+
+Commands:
+  interactive  a interactive emulator interface
+  minimal      a minimal emulator interface with no tui
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -d, --debug
+  -h, --help     Print help
+  -V, --version  Print version
+```
 
 # License
 
