@@ -128,38 +128,8 @@ impl Processor {
                 self.registers.set(15, |pc| (pc as i16 + imm11) as u32, self.mode);
             },
             InstructionKind::Ldr { rt, source } => {
-                /*
-                    base: 12
-                    imm32: 4
-                    address: 16
-                    data: 536870928
-
-                    base: 12
-                    imm32: 8
-                    address: 20
-                    data: 536870912
-                */
-
                 let pc = 4 * (self.registers.get(15, self.mode) / 4);
-                // let pc = 4 * (pc / 4);
-
-                // println!("base: {}", pc);
-                // println!("imm32: {:?}", source);
-
-                /*
-                for addr in 0..33 {
-                    println!("{:x?}: {:x?}", addr, self.read::<u8>(addr));
-                }
-                */
-
-                // TODO: maybe we are loading the program wrong as the addresses are valid in zmu
-                // println!("address: {}", (pc + Into::<u32>::into(source)) as usize);
-
-                // println!("{}", u16::from_le_bytes([0, 32]));
-
                 let data = self.read::<u32>((pc + Into::<u32>::into(source)) as usize);
-
-                // println!("data: {}", data);
 
                 self.registers.set(rt, |_| data as u32, self.mode);
             },

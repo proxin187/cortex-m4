@@ -1,10 +1,16 @@
 <div align="center">
 
-# Crtx
+# Cortez
+
+![GitHub License](https://img.shields.io/badge/license-MIT-red?style=for-the-badge&logo=none)
+![Dependencies](https://deps.rs/repo/github/proxin187/cortez/status.svg?style=for-the-badge&logo=none)
 
 An easy-to-use nRF52833/cortex-m4 emulator that that makes debugging and developing for cortex-m4 chips easier.
 
 </div>
+
+> [!WARNING]
+> Cortez is still a work-in-progess project, only a small subset of the armv7m instruction set is implemented.
 
 
 # Roadmap
@@ -16,7 +22,7 @@ An easy-to-use nRF52833/cortex-m4 emulator that that makes debugging and develop
 
 # License
 
-Cortex-m4 is licensed under the MIT-License.
+Cortez is licensed under the MIT-License.
 
 # Sources
 [nRF52833](https://infocenter.nordicsemi.com/pdf/nRF52833_PS_v1.3.pdf)
