@@ -3,7 +3,7 @@
 # Cortez
 
 ![GitHub License](https://img.shields.io/badge/license-MIT-red?style=for-the-badge&logo=none)
-![Dependencies](https://deps.rs/repo/github/proxin187/cortez/status.svg?style=for-the-badge&logo=none)
+![dependencies](https://deps.rs/repo/github/proxin187/cortez/status.svg?style=for-the-badge)
 
 An easy-to-use nRF52833/cortex-m4 emulator that that makes debugging and developing for cortex-m4 chips easier.
 
